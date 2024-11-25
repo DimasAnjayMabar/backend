@@ -14,7 +14,7 @@ app.use(bodyParser.json());
 
 // Session setup
 app.use(session({
-    secret: 'your-secret-key',
+    secret: '123',
     resave: false,
     saveUninitialized: true,
 }));
@@ -218,6 +218,217 @@ app.post('/receivables', (req, res) => {
     // });
 });
 
+//fetch product into popup
+app.post('/product-details', (req, res) => {
+  const { servername, username, password, database, product_id } = req.body;
+
+  // Use the provided credentials to connect to the database
+  const client = new Client({
+    host: servername,
+    user: username,
+    password: password,
+    database: database,
+    port: 5432, // PostgreSQL default port
+  });
+
+  client.connect()
+    .then(() => {
+      // Query the database for a single product by ID
+      return client.query('SELECT * FROM barang WHERE id_barang = $1', [product_id]);
+    })
+    .then((result) => {
+      if (result.rows.length === 0) {
+        // No product found with the given ID
+        return res.status(404).json({
+          status: 'failure',
+          message: 'Product not found',
+        });
+      }
+
+      res.status(200).json({
+        status: 'success',
+        products: result.rows[0], // Return only the first product (single product)
+      });
+    })
+    .catch((err) => {
+      res.status(500).json({
+        status: 'failure',
+        message: 'Failed to fetch product details: ' + err.message,
+      });
+    });
+});
+
+//fetch transaction into popup
+app.post('/transaction-details', (req, res) => {
+  const { servername, username, password, database, transaction_id } = req.body;
+
+  // Use the provided credentials to connect to the database
+  const client = new Client({
+    host: servername,
+    user: username,
+    password: password,
+    database: database,
+    port: 5432, // PostgreSQL default port
+  });
+
+  client.connect()
+    .then(() => {
+      // Query the database for transaction details
+      return client.query(`
+        SELECT 
+          t.id_transaksi, t.tanggal_transaksi, t.total_harga, t.piutang,
+          c.nama_customer, c.no_telp_customer, c.email_customer,
+          dt.id_barang, dt.quantity, dt.subtotal, b.nama_barang
+        FROM transaksi t
+        JOIN customer c ON t.id_customer = c.id_customer
+        JOIN detail_transaksi dt ON t.id_transaksi = dt.id_transaksi
+        JOIN barang b ON dt.id_barang = b.id_barang
+        WHERE t.id_transaksi = $1
+      `, [transaction_id]);
+    })
+    .then((result) => {
+      if (result.rows.length === 0) {
+        return res.status(404).json({
+          status: 'failure',
+          message: 'Transaction not found',
+        });
+      }
+
+      // Organize the transaction and detail data
+      const transactionDetails = {
+        id_transaksi: result.rows[0].id_transaksi,
+        tanggal_transaksi: result.rows[0].tanggal_transaksi,
+        total_harga: result.rows[0].total_harga,
+        piutang: result.rows[0].piutang,
+        nama_customer: result.rows[0].nama_customer,
+        no_telp_customer: result.rows[0].no_telp_customer,
+        email_customer: result.rows[0].email_customer,
+        items: result.rows.map(row => ({
+          id_barang: row.id_barang,
+          nama_barang: row.nama_barang,
+          quantity: row.quantity,
+          subtotal: row.subtotal
+        }))
+      };
+
+      res.status(200).json({
+        status: 'success',
+        transaction: transactionDetails,
+      });
+    })
+    .catch((err) => {
+      res.status(500).json({
+        status: 'failure',
+        message: 'Failed to fetch transaction details: ' + err.message,
+      });
+    });
+});
+
+//fetch debt into popup
+app.post('/debt-details', (req, res) => {
+  const { servername, username, password, database, product_id } = req.body;
+
+  // Use the provided credentials to connect to the database
+  const client = new Client({
+    host: servername,
+    user: username,
+    password: password,
+    database: database,
+    port: 5432, // PostgreSQL default port
+  });
+
+  client.connect()
+    .then(() => {
+      // Query the products where the 'hutang' column is true
+      return client.query(`
+        SELECT * 
+        FROM barang
+        JOIN distributor ON barang.id_distributor = distributor.id_distributor
+        where id_barang = $1 and hutang = true
+      `, [product_id]);
+    })
+    .then((result) => {
+      res.status(200).json({
+        status: 'success',
+        products: result.rows[0], // Send the product data in the response
+      });
+    })
+    .catch((err) => {
+      res.status(500).json({
+        status: 'failure',
+        message: 'Failed to fetch products: ' + err.message,
+      });
+    })
+  //   .finally(() => {
+  //     client.end(); // Ensure the client connection is closed
+  // });
+});
+
+//fetch receivable into popup
+app.post('/receivable-details', (req, res) => {
+  const { servername, username, password, database, transaction_id } = req.body;
+
+  // Use the provided credentials to connect to the database
+  const client = new Client({
+    host: servername,
+    user: username,
+    password: password,
+    database: database,
+    port: 5432, // PostgreSQL default port
+  });
+
+  client.connect()
+    .then(() => {
+      // Query the database for transaction details
+      return client.query(`
+        SELECT 
+          t.id_transaksi, t.tanggal_transaksi, t.total_harga, t.piutang,
+          c.nama_customer, c.no_telp_customer, c.email_customer,
+          dt.id_barang, dt.quantity, dt.subtotal, b.nama_barang
+        FROM transaksi t
+        JOIN customer c ON t.id_customer = c.id_customer
+        JOIN detail_transaksi dt ON t.id_transaksi = dt.id_transaksi
+        JOIN barang b ON dt.id_barang = b.id_barang
+        WHERE t.id_transaksi = $1
+      `, [transaction_id]);
+    })
+    .then((result) => {
+      if (result.rows.length === 0) {
+        return res.status(404).json({
+          status: 'failure',
+          message: 'Transaction not found',
+        });
+      }
+
+      // Organize the transaction and detail data
+      const transactionDetails = {
+        id_transaksi: result.rows[0].id_transaksi,
+        tanggal_transaksi: result.rows[0].tanggal_transaksi,
+        total_harga: result.rows[0].total_harga,
+        piutang: result.rows[0].piutang,
+        nama_customer: result.rows[0].nama_customer,
+        no_telp_customer: result.rows[0].no_telp_customer,
+        email_customer: result.rows[0].email_customer,
+        items: result.rows.map(row => ({
+          id_barang: row.id_barang,
+          nama_barang: row.nama_barang,
+          quantity: row.quantity,
+          subtotal: row.subtotal
+        }))
+      };
+
+      res.status(200).json({
+        status: 'success',
+        transaction: transactionDetails,
+      });
+    })
+    .catch((err) => {
+      res.status(500).json({
+        status: 'failure',
+        message: 'Failed to fetch transaction details: ' + err.message,
+      });
+    });
+});
 
 // Route to handle logout (clear session)
 app.post('/logout', (req, res) => {
