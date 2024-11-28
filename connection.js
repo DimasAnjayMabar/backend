@@ -119,7 +119,7 @@ app.post('/transactions', (req, res) => {
       .then((result) => {
         res.status(200).json({
           status: 'success',
-          products: result.rows, // Send the product data in the response
+          transactions: result.rows, // Send the product data in the response
         });
       })
       .catch((err) => {
@@ -204,7 +204,7 @@ app.post('/receivables', (req, res) => {
       .then((result) => {
         res.status(200).json({
           status: 'success',
-          products: result.rows, // Send the product data in the response
+          transactions: result.rows, // Send the product data in the response
         });
       })
       .catch((err) => {
@@ -313,7 +313,7 @@ app.post('/transaction-details', (req, res) => {
 
       res.status(200).json({
         status: 'success',
-        transaction: transactionDetails,
+        transactions: transactionDetails,
       });
     })
     .catch((err) => {
@@ -419,7 +419,7 @@ app.post('/receivable-details', (req, res) => {
 
       res.status(200).json({
         status: 'success',
-        transaction: transactionDetails,
+        transactions: transactionDetails,
       });
     })
     .catch((err) => {
@@ -428,6 +428,42 @@ app.post('/receivable-details', (req, res) => {
         message: 'Failed to fetch transaction details: ' + err.message,
       });
     });
+});
+
+//add new barang
+app.post('/new-product', (req, res) => {
+  const { servername, username, password, database} = req.body;
+
+  // Use the provided credentials to connect to the database
+  const client = new Client({
+    host: servername,
+    user: username,
+    password: password,
+    database: database,
+    port: 5432, // PostgreSQL default port
+  });
+
+  client.connect()
+    .then(() => {
+      return client.query(`
+
+      `);
+    })
+    .then((result) => {
+      res.status(200).json({
+        status: 'success',
+        products: result.rows[0], // Send the product data in the response
+      });
+    })
+    .catch((err) => {
+      res.status(500).json({
+        status: 'failure',
+        message: 'Failed to fetch products: ' + err.message,
+      });
+    })
+  //   .finally(() => {
+  //     client.end(); // Ensure the client connection is closed
+  // });
 });
 
 // Route to handle logout (clear session)
