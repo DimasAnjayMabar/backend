@@ -22,7 +22,7 @@ app.use(session({
 // PostgreSQL connection (but not yet established)
 let client;
 
-// /connect endpoint to verify database connection
+//login ke database
 app.post('/connect', (req, res) => {
     const { servername, username, password, database } = req.body;
 
@@ -64,7 +64,7 @@ app.post('/connect', (req, res) => {
         });
 });
 
-// // /products endpoint to fetch product details (after session connection is successful)
+//view produk
 app.post('/products', (req, res) => {
     const { servername, username, password, database } = req.body;
   
@@ -95,7 +95,7 @@ app.post('/products', (req, res) => {
     });
 });
 
-// // /products endpoint to fetch product details (after session connection is successful)
+//view transaksi
 app.post('/transactions', (req, res) => {
     const { servername, username, password, database } = req.body;
   
@@ -125,7 +125,7 @@ app.post('/transactions', (req, res) => {
       .catch((err) => {
         res.status(500).json({
           status: 'failure',
-          message: 'Failed to fetch products: ' + err.message,
+          message: 'Failed to fetch transactions: ' + err.message,
         });
     });
 });
@@ -144,7 +144,7 @@ app.post('/transactions', (req, res) => {
 //     });
 // });
 
-//debt endpoint
+//view hutang
 app.post('/debts', (req, res) => {
     const { servername, username, password, database } = req.body;
   
@@ -165,13 +165,13 @@ app.post('/debts', (req, res) => {
       .then((result) => {
         res.status(200).json({
           status: 'success',
-          products: result.rows, // Send the product data in the response
+          debts: result.rows, // Send the product data in the response
         });
       })
       .catch((err) => {
         res.status(500).json({
           status: 'failure',
-          message: 'Failed to fetch products: ' + err.message,
+          message: 'Failed to fetch debts: ' + err.message,
         });
       })
     //   .finally(() => {
@@ -179,6 +179,7 @@ app.post('/debts', (req, res) => {
     // });
 });
 
+//view piutang
 app.post('/receivables', (req, res) => {
     const { servername, username, password, database } = req.body;
   
@@ -204,18 +205,56 @@ app.post('/receivables', (req, res) => {
       .then((result) => {
         res.status(200).json({
           status: 'success',
-          transactions: result.rows, // Send the product data in the response
+          receivables: result.rows, // Send the product data in the response
         });
       })
       .catch((err) => {
         res.status(500).json({
           status: 'failure',
-          message: 'Failed to fetch products: ' + err.message,
+          message: 'Failed to fetch receivables: ' + err.message,
         });
       })
     //   .finally(() => {
     //     client.end(); // Ensure the client connection is closed
     // });
+});
+
+//view distributor
+app.post('/distributors', (req, res) => {
+  const { servername, username, password, database } = req.body;
+
+  // Use the provided credentials to connect to the database
+  const client = new Client({
+    host: servername,
+    user: username,
+    password: password,
+    database: database,
+    port: 5432, // PostgreSQL default port
+  });
+
+  client.connect()
+    .then(() => {
+      // Query the products where the 'hutang' column is true
+      return client.query(`
+          SELECT * 
+          FROM distributor
+        `);
+    })
+    .then((result) => {
+      res.status(200).json({
+        status: 'success',
+        distributors: result.rows, // Send the product data in the response
+      });
+    })
+    .catch((err) => {
+      res.status(500).json({
+        status: 'failure',
+        message: 'Failed to fetch distributors: ' + err.message,
+      });
+    })
+  //   .finally(() => {
+  //     client.end(); // Ensure the client connection is closed
+  // });
 });
 
 //fetch product into popup
@@ -234,7 +273,10 @@ app.post('/product-details', (req, res) => {
   client.connect()
     .then(() => {
       // Query the database for a single product by ID
-      return client.query('SELECT * FROM barang WHERE id_barang = $1', [product_id]);
+      return client.query(`SELECT * 
+        FROM barang
+        JOIN distributor ON barang.id_distributor = distributor.id_distributor
+        where id_barang = $1`, [product_id]);
     })
     .then((result) => {
       if (result.rows.length === 0) {
@@ -430,15 +472,15 @@ app.post('/receivable-details', (req, res) => {
     });
 });
 
-//add new barang
-app.post('/new-product', (req, res) => {
-  const { servername, username, password, database} = req.body;
+//fetch distributors into popup
+app.post('/distributor-details', (req, res) => {
+  const { servername, username, password, database, distributor_id} = req.body;
 
   // Use the provided credentials to connect to the database
   const client = new Client({
     host: servername,
     user: username,
-    password: password,
+    password: String(password),
     database: database,
     port: 5432, // PostgreSQL default port
   });
@@ -446,8 +488,45 @@ app.post('/new-product', (req, res) => {
   client.connect()
     .then(() => {
       return client.query(`
+        SELECT * FROM distributor WHERE id_distributor = $1
+      `, [distributor_id]);
+    })
+    .then((result) => {
+      res.status(200).json({
+        status: 'success',
+        distributors: result.rows[0], // Send the product data in the response
+      });
+    })
+    .catch((err) => {
+      res.status(500).json({
+        status: 'failure',
+        message: 'Failed to fetch distributors: ' + err.message,
+      });
+    })
+  //   .finally(() => {
+  //     client.end(); // Ensure the client connection is closed
+  // });
+});
 
-      `);
+app.post('/new-product', (req, res) => {
+  const { servername, username, password, database, nama_barang, harga_beli, harga_jual, stok, hutang, id_distributor } = req.body;
+
+  // Use the provided credentials to connect to the database
+  const client = new Client({
+    host: servername,
+    user: username,
+    password: String(password),
+    database: database,
+    port: 5432, // PostgreSQL default port
+  });
+
+  client.connect()
+    .then(() => {
+      return client.query(`
+        INSERT INTO barang (nama_barang, harga_beli, harga_jual, stok, hutang, id_distributor)
+        VALUES ($1, $2, $3, $4, $5, $6)
+        RETURNING *
+      `, [nama_barang, harga_beli, harga_jual, stok, hutang, id_distributor]); // Added distributor_id
     })
     .then((result) => {
       res.status(200).json({
@@ -458,13 +537,14 @@ app.post('/new-product', (req, res) => {
     .catch((err) => {
       res.status(500).json({
         status: 'failure',
-        message: 'Failed to fetch products: ' + err.message,
+        message: 'Failed to add product: ' + err.message,
       });
     })
   //   .finally(() => {
   //     client.end(); // Ensure the client connection is closed
   // });
 });
+
 
 // Route to handle logout (clear session)
 app.post('/logout', (req, res) => {
