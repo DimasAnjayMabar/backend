@@ -1,5 +1,5 @@
 const express = require('express');
-const { Client } = require('pg');  // Import PostgreSQL Client from pg package
+const {Client} = require('pg'); 
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const session = require('express-session');
@@ -7,26 +7,23 @@ const session = require('express-session');
 const app = express();
 const port = 3000;
 
-// Middleware setup
 app.use(cors());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
-// Session setup
 app.use(session({
     secret: '123',
     resave: false,
     saveUninitialized: true,
 }));
 
-// PostgreSQL connection (but not yet established)
 let client;
 
-//login ke database
+//koneksi ke database
 app.post('/connect', (req, res) => {
+    //request ke dalam body flutter
     const { servername, username, password, database } = req.body;
 
-    // Validate input
     if (!servername || !username || !password || !database) {
         return res.status(400).json({
             status: 'failure',
@@ -34,18 +31,19 @@ app.post('/connect', (req, res) => {
         });
     }
 
-    // Attempt to establish the database connection
+    //inisialisasi
     client = new Client({
         host: servername,
         user: username,
         password: password,
         database: database,
-        port: 5432,  // Default PostgreSQL port
+        port: 5432,
     });
 
+    //koneksi inputan client ke database
     client.connect()
         .then(() => {
-            // Store the connection details in the session
+            //menyimpan session (hanya untuk chrome)
             req.session.servername = servername;
             req.session.username = username;
             req.session.password = password;
@@ -66,25 +64,26 @@ app.post('/connect', (req, res) => {
 
 //view produk
 app.post('/products', (req, res) => {
+    //request identitas database dari body flutter 
     const { servername, username, password, database } = req.body;
-  
-    // Use the provided credentials to connect to the database
+
     const client = new Client({
       host: servername,
       user: username,
       password: password,
       database: database,
-      port: 5432, // PostgreSQL default port
+      port: 5432,
     });
-  
+    
+    //setelah terkoneksi dengan database, query data barang dari database
     client.connect()
       .then(() => {
-        return client.query('SELECT * FROM barang'); // Query the products
+        return client.query('SELECT * FROM barang');
       })
       .then((result) => {
         res.status(200).json({
           status: 'success',
-          products: result.rows, // Send the product data in the response
+          products: result.rows,
         });
       })
       .catch((err) => {
@@ -146,26 +145,27 @@ app.post('/transactions', (req, res) => {
 
 //view hutang
 app.post('/debts', (req, res) => {
+    //request identitas database dari body flutter untuk kunci masuk ke dalam database
     const { servername, username, password, database } = req.body;
   
-    // Use the provided credentials to connect to the database
+    //inisialisasi koneksi
     const client = new Client({
       host: servername,
       user: username,
       password: password,
       database: database,
-      port: 5432, // PostgreSQL default port
+      port: 5432,
     });
-  
+    
+    //jika terkoneksi
     client.connect()
       .then(() => {
-        // Query the products where the 'hutang' column is true
         return client.query('SELECT * FROM barang WHERE hutang = TRUE'); 
       })
       .then((result) => {
         res.status(200).json({
           status: 'success',
-          debts: result.rows, // Send the product data in the response
+          debts: result.rows,
         });
       })
       .catch((err) => {
@@ -174,27 +174,25 @@ app.post('/debts', (req, res) => {
           message: 'Failed to fetch debts: ' + err.message,
         });
       })
-    //   .finally(() => {
-    //     client.end(); // Ensure the client connection is closed
-    // });
 });
 
 //view piutang
 app.post('/receivables', (req, res) => {
+  //request identitas database dari body flutter untuk kunci masuk ke dalam database
     const { servername, username, password, database } = req.body;
   
-    // Use the provided credentials to connect to the database
+    //inisialisasi koneksi
     const client = new Client({
       host: servername,
       user: username,
       password: password,
       database: database,
-      port: 5432, // PostgreSQL default port
+      port: 5432,
     });
-  
+    
+    //jika terkoneksi 
     client.connect()
       .then(() => {
-        // Query the products where the 'hutang' column is true
         return client.query(`
             SELECT * 
             FROM transaksi
@@ -214,27 +212,24 @@ app.post('/receivables', (req, res) => {
           message: 'Failed to fetch receivables: ' + err.message,
         });
       })
-    //   .finally(() => {
-    //     client.end(); // Ensure the client connection is closed
-    // });
 });
 
 //view distributor
 app.post('/distributors', (req, res) => {
   const { servername, username, password, database } = req.body;
 
-  // Use the provided credentials to connect to the database
+  //inisialisasi koneksi
   const client = new Client({
     host: servername,
     user: username,
     password: password,
     database: database,
-    port: 5432, // PostgreSQL default port
+    port: 5432,
   });
 
+  //jika terkoneksi
   client.connect()
     .then(() => {
-      // Query the products where the 'hutang' column is true
       return client.query(`
           SELECT * 
           FROM distributor
@@ -243,7 +238,7 @@ app.post('/distributors', (req, res) => {
     .then((result) => {
       res.status(200).json({
         status: 'success',
-        distributors: result.rows, // Send the product data in the response
+        distributors: result.rows, 
       });
     })
     .catch((err) => {
@@ -252,9 +247,41 @@ app.post('/distributors', (req, res) => {
         message: 'Failed to fetch distributors: ' + err.message,
       });
     })
-  //   .finally(() => {
-  //     client.end(); // Ensure the client connection is closed
-  // });
+});
+
+//view customers
+app.post('/customers', (req, res) => {
+  const { servername, username, password, database } = req.body;
+
+  //inisialisasi koneksi
+  const client = new Client({
+    host: servername,
+    user: username,
+    password: password,
+    database: database,
+    port: 5432,
+  });
+
+  //jika terkoneksi
+  client.connect()
+    .then(() => {
+      return client.query(`
+          SELECT * 
+          FROM customer
+        `);
+    })
+    .then((result) => {
+      res.status(200).json({
+        status: 'success',
+        customers: result.rows, 
+      });
+    })
+    .catch((err) => {
+      res.status(500).json({
+        status: 'failure',
+        message: 'Failed to fetch customers: ' + err.message,
+      });
+    })
 });
 
 //fetch product into popup
@@ -366,22 +393,23 @@ app.post('/transaction-details', (req, res) => {
     });
 });
 
-//fetch debt into popup
+//detail hutang
 app.post('/debt-details', (req, res) => {
+  //request identitas database beserta id produk agar kartu yang ditekan menunjukkan detail yang benar
   const { servername, username, password, database, product_id } = req.body;
-
-  // Use the provided credentials to connect to the database
+  
+  //inisialisasi koneksi
   const client = new Client({
     host: servername,
     user: username,
     password: password,
     database: database,
-    port: 5432, // PostgreSQL default port
+    port: 5432,
   });
 
+  //jika terkoneksi
   client.connect()
     .then(() => {
-      // Query the products where the 'hutang' column is true
       return client.query(`
         SELECT * 
         FROM barang
@@ -401,27 +429,24 @@ app.post('/debt-details', (req, res) => {
         message: 'Failed to fetch products: ' + err.message,
       });
     })
-  //   .finally(() => {
-  //     client.end(); // Ensure the client connection is closed
-  // });
 });
 
-//fetch receivable into popup
+//detail piutang
 app.post('/receivable-details', (req, res) => {
+    //request identitas database beserta id produk agar kartu yang ditekan menunjukkan detail yang benar
   const { servername, username, password, database, transaction_id } = req.body;
 
-  // Use the provided credentials to connect to the database
+    //inisialisasi koneksi
   const client = new Client({
     host: servername,
     user: username,
     password: password,
     database: database,
-    port: 5432, // PostgreSQL default port
+    port: 5432,
   });
 
   client.connect()
     .then(() => {
-      // Query the database for transaction details
       return client.query(`
         SELECT 
           t.id_transaksi, t.tanggal_transaksi, t.total_harga, t.piutang,
@@ -442,7 +467,6 @@ app.post('/receivable-details', (req, res) => {
         });
       }
 
-      // Organize the transaction and detail data
       const transactionDetails = {
         id_transaksi: result.rows[0].id_transaksi,
         tanggal_transaksi: result.rows[0].tanggal_transaksi,
@@ -472,19 +496,19 @@ app.post('/receivable-details', (req, res) => {
     });
 });
 
-//fetch distributors into popup
+//fetch detail distributor
 app.post('/distributor-details', (req, res) => {
   const { servername, username, password, database, distributor_id} = req.body;
 
-  // Use the provided credentials to connect to the database
   const client = new Client({
     host: servername,
     user: username,
     password: String(password),
     database: database,
-    port: 5432, // PostgreSQL default port
+    port: 5432,
   });
 
+  //jika terkoneksi
   client.connect()
     .then(() => {
       return client.query(`
@@ -494,7 +518,7 @@ app.post('/distributor-details', (req, res) => {
     .then((result) => {
       res.status(200).json({
         status: 'success',
-        distributors: result.rows[0], // Send the product data in the response
+        distributors: result.rows[0],
       });
     })
     .catch((err) => {
@@ -503,10 +527,39 @@ app.post('/distributor-details', (req, res) => {
         message: 'Failed to fetch distributors: ' + err.message,
       });
     })
-  //   .finally(() => {
-  //     client.end(); // Ensure the client connection is closed
-  // });
 });
+
+//fetch detail customer
+app.post('/customer-details', (req, res) => {
+  const{servername, username, password, database, customer_id} = req.body;
+
+  //inisialisasi koneksi
+  const client = new Client ({
+    host : servername,
+    user : username,
+    password : password,
+    database : database,
+    port : 5432
+  })
+
+  //jika terkoneksi
+  client.connect()
+  .then(() => {
+    return client.query(`select * from customer where id_customer = $1`, [customer_id])
+  })
+  .then((result) => {
+    res.status(200).json({
+      status : 'success',
+      customers : result.rows[0],
+    })
+  })
+  .catch((err) => {
+    res.status(500).json({
+      status : 'failure',
+      message : 'Failed to fetch customers: ' + err.message,
+    })
+  })
+})
 
 app.post('/new-product', (req, res) => {
   const { servername, username, password, database, nama_barang, harga_beli, harga_jual, stok, hutang, id_distributor } = req.body;
@@ -546,7 +599,7 @@ app.post('/new-product', (req, res) => {
 });
 
 
-// Route to handle logout (clear session)
+//menghapus session dari node js (khusus untuk chrome dan web app)
 app.post('/logout', (req, res) => {
     req.session.destroy((err) => {
         if (err) {
@@ -563,7 +616,7 @@ app.post('/logout', (req, res) => {
     });
 });
 
-// Start the server
+//memulai server
 app.listen(port, () => {
     console.log(`Server running on http://localhost:${port}`);
 });
