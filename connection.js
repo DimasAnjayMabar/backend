@@ -593,9 +593,39 @@ app.post('/new-product', (req, res) => {
         message: 'Failed to add product: ' + err.message,
       });
     })
-  //   .finally(() => {
-  //     client.end(); // Ensure the client connection is closed
-  // });
+});
+
+app.post('/new-distributor', (req, res) => {
+  const { servername, username, password, database, nama_distributor, no_telp_distributor, email_distributor, link_ecommerce } = req.body;
+
+  const client = new Client({
+    host: servername,
+    user: username,
+    password: String(password),
+    database: database,
+    port: 5432,
+  });
+
+  client.connect()
+    .then(() => {
+      return client.query(`
+        INSERT INTO distributor (nama_distributor, no_telp_distributor, email_distributor, link_ecommerce)
+        VALUES ($1, $2, $3, $4)
+        RETURNING *
+      `, [nama_distributor, no_telp_distributor, email_distributor, link_ecommerce]); 
+    })
+    .then((result) => {
+      res.status(200).json({
+        status: 'success',
+        distributors: result.rows[0],
+      });
+    })
+    .catch((err) => {
+      res.status(500).json({
+        status: 'failure',
+        message: 'Failed to add distributor: ' + err.message,
+      });
+    })
 });
 
 
