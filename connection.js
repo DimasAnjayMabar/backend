@@ -3,6 +3,8 @@ const {Client} = require('pg');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const session = require('express-session');
+const bcrypt = require('bcrypt');
+
 
 const app = express();
 const port = 3000;
@@ -283,6 +285,42 @@ app.post('/customers', (req, res) => {
       });
     })
 });
+
+app.post('/admins', (req, res) => {
+  const { servername, username, password, database, id_admin} = req.body;
+
+  const client = new Client({
+    host: servername,
+    user: username,
+    password: password,
+    database: database,
+    port: 5432
+  });
+
+  client.connect()
+  .then(() => {
+    return client.query('select * from admin where id_admin = $1', [id_admin]);
+  })
+  .then((result) => {
+    if(result.rows.length === 0){
+      return res.status(404).json({
+        status: 'failure',
+        message: 'Admin not found'
+      });
+    }
+
+    res.status(200).json({
+      status: 'success',
+      admins: result.rows[0]
+    });
+  })
+  .catch((err) => {
+    res.status(500).json({
+      status: 'failure',
+      message: 'Failed to fetch admin details: ' + err.message,
+    });
+  })
+})
 
 //fetch product into popup
 app.post('/product-details', (req, res) => {
@@ -628,7 +666,6 @@ app.post('/new-distributor', (req, res) => {
     })
 });
 
-
 //menghapus session dari node js (khusus untuk chrome dan web app)
 app.post('/logout', (req, res) => {
     req.session.destroy((err) => {
@@ -644,6 +681,60 @@ app.post('/logout', (req, res) => {
             message: 'Logged out successfully.',
         });
     });
+});
+
+app.post('/verify-admin', async (req, res) => {
+  const { servername, username, password, database, username_admin, password_admin } = req.body;
+
+  const client = new Client({
+    host: servername,
+    user: username,
+    password: String(password),
+    database: database,
+    port: 5432,
+  });
+
+  try {
+    await client.connect(); // Properly waiting for the connection to establish
+
+    // Query untuk mencari admin berdasarkan username
+    const result = await client.query('SELECT * FROM admin WHERE username = $1', [username_admin]);
+
+    if (result.rows.length === 0) {
+      return res.status(401).json({
+        status: 'failure',
+        message: 'Admin user not found',
+      });
+    }
+
+    const admin = result.rows[0];
+
+    // Verifikasi password menggunakan bcrypt
+    const isMatch = await bcrypt.compare(password_admin, admin.password);
+
+    if (isMatch) {
+      // Verifikasi berhasil, kirim data admin dalam response
+      return res.status(200).json({
+        status: 'success',
+        message: 'Admin verified successfully',
+        admin: {
+          id_admin: admin.id_admin,  // Kirimkan id_admin sebagai integer
+          username_admin: admin.username,  // Pastikan mengirimkan username_admin yang benar
+        },
+      });
+    } else {
+      return res.status(401).json({
+        status: 'failure',
+        message: 'Incorrect password',
+      });
+    }
+  } catch (err) {
+    console.error('Error:', err);
+    return res.status(500).json({
+      status: 'failure',
+      message: 'Internal server error: ' + err.message,
+    });
+  }
 });
 
 //memulai server
