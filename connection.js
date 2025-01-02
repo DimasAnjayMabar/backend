@@ -1,8 +1,15 @@
+/*
+
+  inisialisasi
+
+*/
 const express = require('express');
 const {Client} = require('pg'); 
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const session = require('express-session');
+const bcrypt = require('bcrypt');
+
 
 const app = express();
 const port = 3000;
@@ -19,7 +26,11 @@ app.use(session({
 
 let client;
 
-//koneksi ke database
+/*
+
+  koneksi ke database
+
+*/
 app.post('/connect', (req, res) => {
     //request ke dalam body flutter
     const { servername, username, password, database } = req.body;
@@ -62,6 +73,11 @@ app.post('/connect', (req, res) => {
         });
 });
 
+/*
+
+  endpoint view
+
+*/
 //view produk
 app.post('/products', (req, res) => {
     //request identitas database dari body flutter 
@@ -283,6 +299,48 @@ app.post('/customers', (req, res) => {
       });
     })
 });
+
+/*
+
+  endpoint fetch detail berdasarkan id
+
+*/
+//fetch admin
+app.post('/admins', (req, res) => {
+  const { servername, username, password, database, id_admin} = req.body;
+
+  const client = new Client({
+    host: servername,
+    user: username,
+    password: password,
+    database: database,
+    port: 5432
+  });
+
+  client.connect()
+  .then(() => {
+    return client.query('select * from admin where id_admin = $1', [id_admin]);
+  })
+  .then((result) => {
+    if(result.rows.length === 0){
+      return res.status(404).json({
+        status: 'failure',
+        message: 'Admin not found'
+      });
+    }
+
+    res.status(200).json({
+      status: 'success',
+      admins: result.rows[0]
+    });
+  })
+  .catch((err) => {
+    res.status(500).json({
+      status: 'failure',
+      message: 'Failed to fetch admin details: ' + err.message,
+    });
+  })
+})
 
 //fetch product into popup
 app.post('/product-details', (req, res) => {
@@ -561,6 +619,13 @@ app.post('/customer-details', (req, res) => {
   })
 })
 
+/*
+
+  endpoint add
+
+*/
+
+//tambah barang baru
 app.post('/new-product', (req, res) => {
   const { servername, username, password, database, nama_barang, harga_beli, harga_jual, stok, hutang, id_distributor } = req.body;
 
@@ -595,6 +660,7 @@ app.post('/new-product', (req, res) => {
     })
 });
 
+//tambah distributor baru
 app.post('/new-distributor', (req, res) => {
   const { servername, username, password, database, nama_distributor, no_telp_distributor, email_distributor, link_ecommerce } = req.body;
 
@@ -628,7 +694,120 @@ app.post('/new-distributor', (req, res) => {
     })
 });
 
+/*
 
+  endpoint edit
+
+*/
+app.post('/edit-pin', async (req, res) => {
+  const { servername, username, password, database, id_admin, new_pin } = req.body;
+
+  const client = new Client({
+    host: servername,
+    user: username,
+    password: String(password),
+    database: database,
+    port: 5432
+  });
+
+  try {
+    await client.connect();  // Menggunakan async/await untuk penanganan koneksi yang lebih baik
+
+    // Menggunakan crypt untuk hashing PIN sebelum disimpan
+    await client.query(
+      `UPDATE admin SET pin = crypt($1, gen_salt('bf')) WHERE id_admin = $2`,
+      [new_pin, id_admin]
+    );
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Pin successfully updated'
+    });
+
+  } catch (err) {
+    res.status(500).json({
+      status: 'failure',
+      message: 'Failed to edit pin: ' + err.message,
+    });
+
+  } finally {
+    await client.end();  // Pastikan koneksi selalu ditutup
+  }
+});
+
+/*
+
+  endpoint delete
+
+*/
+
+//to do delete here
+
+/*
+
+  endpoint verify
+
+*/
+//verify admin to setting
+app.post('/verify-admin', async (req, res) => {
+  const { servername, username, password, database, username_admin, password_admin } = req.body;
+
+  const client = new Client({
+    host: servername,
+    user: username,
+    password: String(password),
+    database: database,
+    port: 5432,
+  });
+
+  try {
+    await client.connect(); // Properly waiting for the connection to establish
+
+    // Query untuk mencari admin berdasarkan username
+    const result = await client.query('SELECT * FROM admin WHERE username = $1', [username_admin]);
+
+    if (result.rows.length === 0) {
+      return res.status(401).json({
+        status: 'failure',
+        message: 'Admin user not found',
+      });
+    }
+
+    const admin = result.rows[0];
+
+    // Verifikasi password menggunakan bcrypt
+    const isMatch = await bcrypt.compare(password_admin, admin.password);
+
+    if (isMatch) {
+      // Verifikasi berhasil, kirim data admin dalam response
+      return res.status(200).json({
+        status: 'success',
+        message: 'Admin verified successfully',
+        admin: {
+          id_admin: admin.id_admin,  // Kirimkan id_admin sebagai integer
+          username_admin: admin.username,  // Pastikan mengirimkan username_admin yang benar
+        },
+      });
+    } else {
+      return res.status(401).json({
+        status: 'failure',
+        message: 'Incorrect password',
+      });
+    }
+  } catch (err) {
+    console.error('Error:', err);
+    return res.status(500).json({
+      status: 'failure',
+      message: 'Internal server error: ' + err.message,
+    });
+  }
+});
+
+/*
+
+  endpoint logout
+
+*/
 //menghapus session dari node js (khusus untuk chrome dan web app)
 app.post('/logout', (req, res) => {
     req.session.destroy((err) => {
@@ -646,6 +825,11 @@ app.post('/logout', (req, res) => {
     });
 });
 
+/*
+
+  ednpoint misc
+
+*/
 //memulai server
 app.listen(port, () => {
     console.log(`Server running on http://localhost:${port}`);
