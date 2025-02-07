@@ -1,14 +1,22 @@
+<<<<<<< HEAD
 /*
 
   initialization
 
 */
+=======
+/* === Initiate Start === */
+
+>>>>>>> 42dc575e29d5d70691f57c30a7de9d92d6819245
 const express = require('express');
 const {Client} = require('pg'); 
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const session = require('express-session');
+<<<<<<< HEAD
 const bcrypt = require('bcrypt');
+=======
+>>>>>>> 42dc575e29d5d70691f57c30a7de9d92d6819245
 
 const app = express();
 const port = 3000;
@@ -23,6 +31,7 @@ app.use(session({
     saveUninitialized: true,
 }));
 
+<<<<<<< HEAD
 /*
 
     create endpoint
@@ -62,6 +71,13 @@ app.use(session({
 */
 
 //connect to the database
+=======
+/* === Initiate End === */
+
+/* === Login Start === */
+
+//koneksi ke database
+>>>>>>> 42dc575e29d5d70691f57c30a7de9d92d6819245
 app.post('/connect', (req, res) => {
     //request ke dalam body flutter
     const { servername, username, password, database } = req.body;
@@ -104,6 +120,7 @@ app.post('/connect', (req, res) => {
         });
 });
 
+<<<<<<< HEAD
 /*
 
     logout endpoint 
@@ -186,8 +203,20 @@ app.post('/verify-admin', async (req, res) => {
     });
   }
 });
+=======
+/* === Login End === */
+
+/* === Misc Endpoint Start === */
+>>>>>>> 42dc575e29d5d70691f57c30a7de9d92d6819245
 
 //memulai server
 app.listen(port, () => {
     console.log(`Server running on http://localhost:${port}`);
+<<<<<<< HEAD
 });
+=======
+});
+
+/* === Misc Endpoint End === */
+
+>>>>>>> 42dc575e29d5d70691f57c30a7de9d92d6819245
